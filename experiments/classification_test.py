@@ -28,23 +28,15 @@ openai = OpenAI(api_key=OPENAI_API_KEY)
 
 
 def task(dataset_row) -> str:
-    user_input = dataset_row.get("attributes.input.value")
+    jailbreak_query = dataset_row.get("jailbreak_query")
     resp = openai.chat.completions.create(
         model=TASK_MODEL,
         temperature=0,
         messages=[
-            {
-                "role": "system",
-                "content": (
-                    f"Classify the user message into one of: {', '.join(CATEGORIES)}. "
-                    "Reply with only the label."
-                ),
-            },
-            {"role": "user", "content": user_input},
+            {"role": "user", "content": jailbreak_query},
         ],
     )
     return resp.choices[0].message.content.strip().lower()
-
 
 def exact_match(output, dataset_row) -> EvaluationResult:
     expected = str(dataset_row.get("attributes.output.value", "")).strip().lower()
