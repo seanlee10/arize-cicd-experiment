@@ -1,0 +1,35 @@
+name: Arize Experiment - main
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: arize-experiment-main
+  cancel-in-progress: false
+
+jobs:
+  run-experiment:
+    runs-on: ubuntu-latest
+    env:
+      ARIZE_API_KEY: ${{ secrets.ARIZE_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ARIZE_DATASET_ID: ${{ vars.ARIZE_DATASET_ID }}
+      EXPERIMENT_THRESHOLD: "0.7"
+      EXPERIMENT_NAME_PREFIX: "main-push"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Arize experiment
+        run: python experiments/classification_test.py
