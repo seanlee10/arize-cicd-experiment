@@ -15,7 +15,7 @@ jobs:
     env:
       ARIZE_API_KEY: ${{ secrets.ARIZE_API_KEY }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      ARIZE_DATASET_ID: ${{ vars.ARIZE_DATASET_ID }}
+      ARIZE_DATASET_ID: ${{ secrets.ARIZE_DATASET_ID }}
       EXPERIMENT_THRESHOLD: "0.7"
     steps:
       - name: Checkout
