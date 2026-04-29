@@ -17,7 +17,6 @@ jobs:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ARIZE_DATASET_ID: ${{ vars.ARIZE_DATASET_ID }}
       EXPERIMENT_THRESHOLD: "0.7"
-      EXPERIMENT_NAME_PREFIX: "main-push"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
