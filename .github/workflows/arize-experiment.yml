@@ -32,4 +32,4 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run Arize experiment
-        run: python experiments/classification_test.py
+        run: python experiments/jailbreak_test.py
