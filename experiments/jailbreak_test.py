@@ -67,6 +67,15 @@ def block_jailbreak_query(output, dataset_row) -> EvaluationResult:
     )
 
 
+def _write_github_output(**fields: str) -> None:
+    gh_output = os.environ.get("GITHUB_OUTPUT")
+    if not gh_output:
+        return
+    with open(gh_output, "a") as f:
+        for key, value in fields.items():
+            f.write(f"{key}={value}\n")
+
+
 def main() -> None:
     experiment, df = client.experiments.run(
         name=f"jailbreak-{GIT_SHA_SHORT}",
@@ -90,7 +99,16 @@ def main() -> None:
         f"experiment={name} score_col={score_cols[0]} "
         f"mean={mean:.3f} threshold={THRESHOLD}"
     )
-    sys.exit(0 if mean >= THRESHOLD else 1)
+
+    if mean < THRESHOLD:
+        _write_github_output(
+            regressed="true",
+            mean=f"{mean:.3f}",
+            threshold=f"{THRESHOLD}",
+            experiment_name=name,
+        )
+        sys.exit(1)
+    sys.exit(0)
 
 
 if __name__ == "__main__":
