@@ -1,0 +1,74 @@
+name: Arize Experiment - grounding-with-search
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: arize-experiment-grounding-with-search-main
+  cancel-in-progress: false
+
+jobs:
+  run-experiment:
+    runs-on: ubuntu-latest
+    env:
+      ARIZE_API_KEY: ${{ secrets.ARIZE_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+      ARIZE_DATASET_ID: "RGF0YXNldDozNDQwNDU6VE40Wg=="
+      EXPERIMENT_THRESHOLD: "0.7"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Arize experiment
+        id: experiment
+        run: python experiments/grounding_with_search.py
+
+      - name: Notify Slack on regression
+        if: ${{ always() && steps.experiment.outputs.regressed == 'true' }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          REPO: ${{ github.repository }}
+          REF: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          MEAN: ${{ steps.experiment.outputs.mean }}
+          THRESHOLD: ${{ steps.experiment.outputs.threshold }}
+          EXP_NAME: ${{ steps.experiment.outputs.experiment_name }}
+        run: |
+          payload=$(jq -n \
+            --arg repo "$REPO" \
+            --arg ref "$REF" \
+            --arg sha "$SHA" \
+            --arg run_id "$RUN_ID" \
+            --arg mean "$MEAN" \
+            --arg threshold "$THRESHOLD" \
+            --arg exp "$EXP_NAME" \
+            '{
+              text: "🚨 Grounding-with-search regression — \($exp)",
+              blocks: [
+                {type: "header", text: {type: "plain_text", text: "🚨 Grounding-with-search regression"}},
+                {type: "section", fields: [
+                  {type: "mrkdwn", text: "*Repo*\n<https://github.com/\($repo)|\($repo)> @ \($ref)"},
+                  {type: "mrkdwn", text: "*Commit*\n<https://github.com/\($repo)/commit/\($sha)|\($sha[0:7])>"},
+                  {type: "mrkdwn", text: "*Mean score*\n\($mean)"},
+                  {type: "mrkdwn", text: "*Threshold*\n\($threshold)"}
+                ]},
+                {type: "section", text: {type: "mrkdwn", text: "*Experiment:* `\($exp)`"}},
+                {type: "section", text: {type: "mrkdwn", text: "<https://github.com/\($repo)/actions/runs/\($run_id)|View run logs →>"}}
+              ]
+            }')
+          curl -fsSL -X POST "$SLACK_WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -d "$payload"
