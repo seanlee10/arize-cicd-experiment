@@ -66,7 +66,7 @@ def _retrieve_evidence(query: str) -> str:
 
 def task(dataset_row) -> str:
     # TODO: replace `query` with the actual input column in your dataset
-    query = dataset_row.get("query")
+    query = dataset_row.get("English")
     resp = openai_client.chat.completions.create(
         model=TASK_MODEL,
         temperature=0,
