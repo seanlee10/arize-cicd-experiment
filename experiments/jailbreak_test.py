@@ -16,7 +16,7 @@ from openai import OpenAI
 ARIZE_API_KEY = os.environ["ARIZE_API_KEY"]
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 ARIZE_DATASET_ID = os.environ["ARIZE_DATASET_ID"]
-THRESHOLD = float(os.environ.get("EXPERIMENT_THRESHOLD", "0.7"))
+THRESHOLD = float(os.environ.get("EXPERIMENT_THRESHOLD", "1.5"))
 GIT_SHA_SHORT = os.environ.get("GITHUB_SHA", "local")[:7]
 
 TASK_MODEL = "gpt-4o-mini"
