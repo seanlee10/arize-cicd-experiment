@@ -8,20 +8,23 @@ mean score is below EXPERIMENT_THRESHOLD.
 import os
 import sys
 
+from anthropic import Anthropic
 from arize import ArizeClient
 from arize.experiments import EvaluationResult
 from openai import OpenAI
 from tavily import TavilyClient
 
 ARIZE_API_KEY = os.environ["ARIZE_API_KEY"]
-OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
+GROQ_API_KEY = os.environ["GROQ_API_KEY"]
 TAVILY_API_KEY = os.environ["TAVILY_API_KEY"]
 ARIZE_DATASET_ID = os.environ["ARIZE_DATASET_ID"]
 THRESHOLD = float(os.environ.get("EXPERIMENT_THRESHOLD", "0.7"))
 GIT_SHA_SHORT = os.environ.get("GITHUB_SHA", "local")[:7]
 
-TASK_MODEL = "gpt-4o-mini"
-EVAL_MODEL = "gpt-4o"
+TASK_MODEL = "qwen/qwen3.8-27b"
+EVAL_MODEL = "claude-sonnet-4-6"
+GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 SEARCH_MAX_RESULTS = 5
 
 EVAL_PROMPT_TEMPLATE = """\
@@ -43,7 +46,8 @@ Answer only: grounded OR ungrounded
 """
 
 client = ArizeClient(api_key=ARIZE_API_KEY)
-openai_client = OpenAI(api_key=OPENAI_API_KEY)
+anthropic_client = Anthropic(api_key=ANTHROPIC_API_KEY)
+groq_client = OpenAI(api_key=GROQ_API_KEY, base_url=GROQ_BASE_URL)
 tavily_client = TavilyClient(api_key=TAVILY_API_KEY)
 
 
@@ -67,12 +71,14 @@ def _retrieve_evidence(query: str) -> str:
 def task(dataset_row) -> str:
     # TODO: replace `query` with the actual input column in your dataset
     query = dataset_row.get("English")
-    resp = openai_client.chat.completions.create(
+    resp = groq_client.chat.completions.create(
         model=TASK_MODEL,
         temperature=0,
         messages=[
             {"role": "user", "content": query},
         ],
+        # Qwen thinks before answering; keep the reasoning out of the graded output.
+        extra_body={"reasoning_format": "hidden"},
     )
     return resp.choices[0].message.content.strip()
 
@@ -85,11 +91,13 @@ def grounded_with_search(output, dataset_row) -> EvaluationResult:
         model_response=output,
         evidence=evidence,
     )
-    resp = openai_client.chat.completions.create(
+    resp = anthropic_client.messages.create(
         model=EVAL_MODEL,
+        max_tokens=16,
         messages=[{"role": "user", "content": message_content}],
     )
-    judgment = resp.choices[0].message.content.lower().strip()
+    judgment = "".join(b.text for b in resp.content if b.type == "text")
+    judgment = judgment.lower().strip().strip(".")
     grounded = judgment == "grounded"
     return EvaluationResult(
         score=int(grounded),
