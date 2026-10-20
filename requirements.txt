@@ -1,4 +1,4 @@
 anthropic==1.12.1
-arize==8.20.0
+arize==8.57.1
 openai==2.33.0
 tavily-python==0.5.1
